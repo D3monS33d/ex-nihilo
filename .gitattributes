@@ -1,0 +1,3 @@
+# Keep line endings as LF everywhere, whatever the platform's default.
+* text=auto eol=lf
+*.jpg binary

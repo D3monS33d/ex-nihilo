@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ex Nihilo</title>
+<meta name="description" content="Two million random bytes. Nobody writes a self-replicating program. One appears anyway.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Ex Nihilo">
+<meta property="og:description" content="Two million random bytes. Nobody writes a self-replicating program. One appears anyway.">
+<meta property="og:image" content="docs/takeover.jpg">
+<meta name="theme-color" content="#05050a">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="view" aria-label="The universe: a grid of 32,400 programs"></canvas>
+<div class="scrim top"></div>
+<div class="scrim bottom"></div>
+
+<header id="brand">
+  <h1>EX NIHILO</h1>
+  <div id="status" class="status sterile"><span class="dot"></span><span id="status-text">Sterile</span></div>
+  <p id="story"></p>
+  <div id="universe">
+    <span class="dim">universe</span>
+    <input id="seed" class="seed" spellcheck="false" autocomplete="off" aria-label="Universe seed" title="Type any seed and press Enter to start that universe">
+    <select id="charted" class="chip" aria-label="Charted universes" title="Universes whose history is already known">
+      <option value="">Charted…</option>
+    </select>
+    <button id="new" class="chip" title="Start a new random universe (N)">New</button>
+    <button id="share" class="chip" title="Copy a link to this exact universe">Share</button>
+    <a class="chip" href="lab.html" title="Run many universes side by side">Multiverse</a>
+    <button id="help-open" class="chip" title="What is this, and how do I drive it? (?)">?</button>
+  </div>
+</header>
+
+<dialog id="help" aria-label="About Ex Nihilo">
+  <h2>What is this?</h2>
+  <p>A grid of 32,400 programs, 64 bytes each, that starts as pure random noise. Every epoch each program is glued to a random neighbour, the 128 bytes are run as code in a ten-instruction language, and the result is cut in half again. There is no goal and no reward, and no replicator is planted.</p>
+  <p>Sooner or later, programs that copy themselves appear anyway and take over. The first ones are usually fragile and die out. This page detects them by testing whether a program really rebuilds itself on inert tape, never by what it looks like.</p>
+  <p>Based on <a href="https://arxiv.org/abs/2406.19108" target="_blank" rel="noopener">Computational Life</a> (Agüera y Arcas et al., 2024). Every universe is fully determined by its seed, so a shared link replays the same history. <a id="source-link" href="#" target="_blank" rel="noopener" hidden>Source on GitHub</a></p>
+  <h2>Controls</h2>
+  <dl>
+    <dt>scroll / pinch</dt><dd>zoom, all the way down to single instructions</dd>
+    <dt>drag</dt><dd>pan</dd>
+    <dt>click</dt><dd>put a cell under the microscope, or use the selected tool</dd>
+    <dt><kbd>Space</kbd></dt><dd>run / pause</dd>
+    <dt><kbd>S</kbd></dt><dd>advance one epoch</dd>
+    <dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>code, species and activity views</dd>
+    <dt><kbd>F</kbd></dt><dd>fit the universe to the screen</dd>
+    <dt><kbd>N</kbd></dt><dd>new random universe</dd>
+    <dt><kbd>P</kbd></dt><dd>save a picture</dd>
+    <dt><kbd>M</kbd></dt><dd>sound: noise while sterile, a chord of the dominant species once alive</dd>
+  </dl>
+  <form method="dialog"><button class="btn">Close</button></form>
+</dialog>
+
+<section id="stats" aria-label="Statistics">
+  <div class="tiles">
+    <div class="tile"><span>Epoch</span><output id="s-epoch">0</output></div>
+    <div class="tile"><span>Epochs / s</span><output id="s-eps">0</output></div>
+    <div class="tile"><span>VM steps / s</span><output id="s-steps">0</output></div>
+    <div class="tile"><span>Alive</span><output id="s-alive">0%</output></div>
+    <div class="tile" title="Byte entropy minus compressed size, in bits per byte. Noise scores 0; structure scores high."><span>Complexity</span><output id="s-complexity">0.00</output></div>
+  </div>
+  <canvas id="timeline" width="840" height="120" aria-label="Timeline of living cells and complexity"></canvas>
+  <div class="timeline-key"><span class="key-alive">living cells</span><span class="key-complexity">complexity</span><span id="threads" class="dim"></span></div>
+</section>
+
+<aside id="species" hidden>
+  <h2>Who is alive</h2>
+  <ol id="species-list"></ol>
+</aside>
+
+<aside id="scope" hidden aria-label="Microscope"></aside>
+
+<div id="legend" data-mode="0" aria-label="What the colours mean">
+  <div class="for-mode-0">
+    <span><i style="color:#2f8bff">&lt;</i><i style="color:#36d6ff">&gt;</i> move head 0</span>
+    <span><i style="color:#9a5bff">{</i><i style="color:#e45bff">}</i> move head 1</span>
+    <span><i style="color:#19c37d">-</i><i style="color:#b8f03c">+</i> change a byte</span>
+    <span><i style="color:#ffb020">.</i><i style="color:#ff6a1a">,</i> copy a byte</span>
+    <span><i style="color:#ff3b6b">[</i><i style="color:#ff86b0">]</i> loop</span>
+    <span class="dim">every other byte does nothing</span>
+  </div>
+  <div class="for-mode-1">
+    <span>each colour is one lineage of replicators</span>
+    <span class="dim">dark cells are not alive</span>
+  </div>
+  <div class="for-mode-2">
+    <span>bright: a program is being overwritten</span>
+    <span class="dim">a colony at rest is dark</span>
+  </div>
+</div>
+
+<nav id="dock" aria-label="Controls">
+  <div class="group">
+    <button id="play" class="icon-btn primary" aria-label="Pause" title="Run / pause (Space)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-pause" d="M8 5v14M16 5v14"/><path class="i-play" d="M8 5l11 7-11 7z"/></svg>
+    </button>
+    <button id="step" class="icon-btn" aria-label="Advance one epoch" title="One epoch (S)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5l9 7-9 7zM18 5v14"/></svg>
+    </button>
+    <div class="seg" id="speed" role="radiogroup" aria-label="Speed">
+      <button data-eps="3" role="radio" aria-checked="false" title="3 epochs per second">Slow</button>
+      <button data-eps="30" role="radio" aria-checked="false" title="30 epochs per second">Steady</button>
+      <button data-eps="0" role="radio" aria-checked="true" title="As fast as this machine can go">Max</button>
+    </div>
+    <button id="sound" class="icon-btn" aria-label="Sound" aria-pressed="false" title="Listen: noise while sterile, a chord of the dominant species once alive (M)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l5 4V6L7 10z"/><path class="i-waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/><path class="i-mute" d="M16 9l5 6M21 9l-5 6"/></svg>
+    </button>
+  </div>
+
+  <div class="group">
+    <span class="label">View</span>
+    <div class="seg" id="mode" role="radiogroup" aria-label="View">
+      <button data-mode="0" role="radio" aria-checked="true" title="Every byte, coloured by instruction (1)">Code</button>
+      <button data-mode="1" role="radio" aria-checked="false" title="Living cells coloured by species (2)">Species</button>
+      <button data-mode="2" role="radio" aria-checked="false" title="Where the soup is being rewritten right now (3)">Activity</button>
+    </div>
+    <button id="fit" class="icon-btn" aria-label="Fit universe to screen" title="Fit to screen (F)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+  </div>
+
+  <div class="group">
+    <span class="label">Hand of god</span>
+    <div class="seg" id="tool" role="radiogroup" aria-label="Tool">
+      <button data-tool="inspect" role="radio" aria-checked="true" title="Click a cell to put it under the microscope">Inspect</button>
+      <button data-tool="irradiate" role="radio" aria-checked="false" title="Meteor: turn a region back into noise">Meteor</button>
+      <button data-tool="sterilize" role="radio" aria-checked="false" title="Sterilise: wipe a region to empty tape">Wipe</button>
+      <button data-tool="implant" role="radio" aria-checked="false" title="Inoculate: plant a replicator (the textbook one, or one you loaded from the microscope)">Inoculate</button>
+    </div>
+    <label class="range" title="Brush size, in cells">
+      <input id="brush" type="range" min="1" max="30" value="9" aria-label="Brush size">
+    </label>
+  </div>
+
+  <div class="group">
+    <span class="label">Radiation</span>
+    <select id="mutation" aria-label="Mutation rate" title="Probability that any byte is randomly replaced each epoch">
+      <option value="0">none</option>
+      <option value="65536">1 / 65,536</option>
+      <option value="4096" selected>1 / 4,096</option>
+      <option value="1024">1 / 1,024</option>
+      <option value="256">1 / 256</option>
+    </select>
+  </div>
+</nav>
+
+<div id="intro">
+  <div class="intro-card">
+    <div class="eyebrow">out of nothing</div>
+    <div class="wordmark">EX NIHILO</div>
+    <p>Behind this text are <b>2,073,600 random bytes</b>, arranged as 32,400 tiny programs. Every moment, neighbours are glued together and run as code. That is the only rule.</p>
+    <p>None of these programs can copy itself, and nobody is going to help them. <b>Keep watching anyway.</b></p>
+    <button id="begin" class="btn big">Watch</button>
+    <div class="hint">scroll to zoom all the way down to the code · click any cell to put it under the microscope</div>
+  </div>
+</div>
+
+<div id="moment" hidden>
+  <div class="moment-card">
+    <div class="eyebrow" id="moment-when"></div>
+    <div class="wordmark" id="moment-title"></div>
+    <p id="moment-text"></p>
+    <div class="genome" id="moment-genome"></div>
+    <div class="row">
+      <button id="moment-action" class="btn"></button>
+      <button id="moment-close" class="btn ghost">Keep watching</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="fatal" hidden></div>
+
+<script>
+  (async function () {
+    // Module scripts and workers do not load from file://, so say so instead of showing nothing.
+    if (location.protocol === 'file:') {
+      var fatal = document.getElementById('fatal');
+      fatal.hidden = false;
+      fatal.textContent = 'Ex Nihilo has to be served over http. Run "npx serve" (or tools/serve.ps1 on Windows) in this folder and open the address it prints.';
+      document.getElementById('intro').hidden = true;
+      return;
+    }
+
+    // Shared memory between threads needs a cross-origin isolated page. sw.js adds the
+    // headers for that, but only to pages loaded after it is installed, so the first
+    // visit reloads once. If isolation cannot be had, the app runs without it.
+    // (?shared=0 skips this, to compare the two modes.)
+    var wanted = new URLSearchParams(location.search).get('shared') !== '0';
+    try {
+      if (wanted && !window.crossOriginIsolated && window.isSecureContext && 'serviceWorker' in navigator) {
+        await navigator.serviceWorker.register('sw.js');
+        await navigator.serviceWorker.ready;
+        if (!sessionStorage.getItem('isolating')) {
+          sessionStorage.setItem('isolating', '1');
+          location.reload();
+          return;
+        }
+      }
+      if (window.crossOriginIsolated) sessionStorage.removeItem('isolating');
+    } catch (err) {
+      console.warn('Running without shared memory:', err);
+    }
+    import('./src/main.js');
+  })();
+</script>
+</body>
+</html>
