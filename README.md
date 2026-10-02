@@ -2,6 +2,8 @@
 
 **Two million random bytes. Nobody writes a self-replicating program. One appears anyway.**
 
+**[Watch it happen: live demo](https://d3mons33d.github.io/ex-nihilo/)** · [multiverse lab](https://d3mons33d.github.io/ex-nihilo/lab.html) · [run the tests](https://d3mons33d.github.io/ex-nihilo/test.html)
+
 ![A universe after life has taken over: every colour is a different lineage of self-replicating code](docs/takeover.jpg)
 
 Open the page and you are looking at noise: 32,400 tiny programs made of random bytes.
@@ -84,7 +86,7 @@ The other fifty-six were still noise at epoch 16,000. How many of them wake up l
 - **Three views**: the raw code; living cells coloured by species; and activity, which lights up where programs are being overwritten.
 - **Hand of god**: drop a meteor (a region returns to noise), wipe a region blank, or inoculate the soup with a replicator. Turn the radiation up or off.
 - **Share a universe**: everything is determined by the seed, so a link replays the same history for anyone.
-- **Multiverse lab** (`lab.html`): run many universes side by side, one per CPU core, and see which ones wake up.
+- **[Multiverse lab](https://d3mons33d.github.io/ex-nihilo/lab.html)**: run many universes side by side, one per CPU core, and see which ones wake up.
 
 ## Is it real?
 
@@ -95,8 +97,8 @@ Fair question for a page that claims to show the origin of life in a browser tab
 - **"Alive" is tested, not guessed.** A program counts as a self-replicator only if, placed next to inert tape, it rebuilds itself there (or builds its mirror image, which then builds it back). The detector never looks for particular code. See [`src/assay.js`](src/assay.js).
 - **The complexity graph is independent of that test.** It is the paper's measure, byte entropy minus compressed size per byte, computed with the browser's deflate where the paper uses brotli. It knows nothing about replicators and jumps at the same moment.
 - **The numbers are not the paper's.** The paper reports that 40% of its well-mixed soups of 131,072 programs change state within 16,000 epochs. Here 4 of 60 universes of 32,400 programs did. Scaling the paper's figure by soup size would predict about 12%, so this is the same order of magnitude and no more than that: the soups differ (2D against well-mixed) and so does the criterion.
-- **The fast interpreter is exact.** The interpreter skips no-ops, fast-forwards provably idle loops and runs on every CPU core. Open [`test.html`](test.html): it checks the fast interpreter against a plain reference implementation on 460,000 tapes, byte for byte, runs a whole universe on both and compares them, and checks that dividing an epoch's work the way the worker threads do gives the same universe as doing it in order.
-- **It is deterministic.** The same seed produces the same history, down to the epoch, whatever the machine and however many cores it has. The histories in the table above were charted single-threaded in the lab; the default universe's has been replayed in the 15-thread viewer, with and without shared memory, and comes out the same to the epoch.
+- **The fast interpreter is exact.** The interpreter skips no-ops, fast-forwards provably idle loops and runs on every CPU core. Open the [test page](https://d3mons33d.github.io/ex-nihilo/test.html): it checks the fast interpreter against a plain reference implementation on 460,000 tapes, byte for byte, runs a whole universe on both and compares them, and checks that dividing an epoch's work the way the worker threads do gives the same universe as doing it in order.
+- **It is deterministic.** The same seed produces the same history, down to the epoch, whatever the machine and however many cores it has. The histories in the table above were charted single-threaded in the lab; the default universe's has been replayed in the 15-thread viewer, with and without shared memory, locally and on the live site, and comes out the same to the epoch.
 - **"Life" is a metaphor with a definition.** These are self-replicating programs in a ten-instruction toy machine. They cannot touch anything outside a 2 MB array.
 - **Most universes are slow.** The default seed was picked because it wakes up early. A random universe typically needs tens of thousands of epochs, and some will outlast your patience. The lab page is the way to explore that honestly.
 
@@ -167,7 +169,7 @@ A few things that made it fast enough to watch:
 - **Pairs are independent.** Within an epoch no cell is in two pairs, so the interactions can run on all cores at once and still give the same result as running them in order. Who meets whom never depends on the soup, so pairings are computed ahead of time on a thread of their own.
 - **Threads share the soup.** Browsers only allow shared memory on "cross-origin isolated" pages, which needs two response headers that static hosts like GitHub Pages cannot set. `sw.js` is a small service worker that adds them. The first visit reloads once to switch it on. If that is not possible the simulation copies data between threads instead and runs two to three times slower while the universe is sterile.
 
-On the 8-core, 16-thread desktop this was written on, the first version ran a sterile universe at about 20 epochs per second per core. The viewer now runs one at 560 to 840, depending on the session, which puts life in the default universe 15 to 23 seconds after you press Watch and the takeover at 19 to 28. Once a universe is alive every interaction is a full copy loop, and it settles at 80 to 90 epochs per second.
+On the 8-core, 16-thread desktop this was written on, the first version ran a sterile universe at about 20 epochs per second per core. The viewer now runs one at 560 to 930, depending on the session, which puts life in the default universe 14 to 23 seconds after you press Watch and the takeover at 17 to 28. Once a universe is alive every interaction is a full copy loop, and it settles at 80 to 90 epochs per second.
 
 ## Who wrote this
 
